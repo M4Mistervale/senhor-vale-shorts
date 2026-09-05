@@ -1,0 +1,41 @@
+name: Tumblr - finalizar autorização
+on:
+  workflow_dispatch:
+    inputs:
+      oauth_token:
+        description: 'Valor oauth_token da URL de retorno'
+        required: true
+        type: string
+      oauth_verifier:
+        description: 'Valor oauth_verifier da URL de retorno'
+        required: true
+        type: string
+      auth_run_id:
+        description: 'ID da execução que criou o artefato tumblr-oauth-state'
+        required: true
+        type: string
+jobs:
+  exchange:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baixar estado temporário
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "${{ inputs.auth_run_id }}" --name tumblr-oauth-state --dir .
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Trocar autorização por tokens
+        env:
+          TUMBLR_CONSUMER_KEY: ${{ secrets.TUMBLR_CONSUMER_KEY }}
+          TUMBLR_CONSUMER_SECRET: ${{ secrets.TUMBLR_CONSUMER_SECRET }}
+          OAUTH_TOKEN: ${{ inputs.oauth_token }}
+          OAUTH_VERIFIER: ${{ inputs.oauth_verifier }}
+        run: node automation/tumblr-oauth-exchange.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tumblr-access-tokens
+          path: tumblr-access-tokens.json
+          retention-days: 1
