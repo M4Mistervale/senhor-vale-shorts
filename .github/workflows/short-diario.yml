@@ -1,8 +1,6 @@
-name: Short diário — Senhor Vale
+name: Fila de 15 Shorts — Senhor Vale
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 18 * * *"
 permissions:
   contents: read
 jobs:
@@ -15,20 +13,25 @@ jobs:
           node-version: 20
       - name: Instalar FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - name: Preparar renderização
+      - name: Preparar renderização e fila
         run: |
           mkdir -p out
-          ffmpeg -y -f lavfi -i "color=c=0x070a12:s=1080x1920:r=30" -f lavfi -i "sine=frequency=220:sample_rate=44100" -t 8 \
+          for i in $(seq 1 15); do ffmpeg -y -f lavfi -i "color=c=0x070a12:s=1080x1920:r=30" -f lavfi -i "sine=frequency=$((210+i*7)):sample_rate=44100" -t 8 \
             -vf "drawbox=x=70:y=330:w=940:h=1060:color=0x171b28:t=fill,drawbox=x=125:y=410:w=830:h=760:color=0x05070c:t=fill,drawbox=x=125:y=410:w=830:h=760:color=0x3b6b78:t=12,drawbox=x=150:y=570:w=780:h=4:color=0xde5276@0.35:t=fill,drawbox=x=150:y=740:w=780:h=4:color=0xde5276@0.35:t=fill,drawbox=x=150:y=910:w=780:h=4:color=0xde5276@0.35:t=fill,drawbox=x=150:y=1080:w=780:h=4:color=0xde5276@0.35:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:text='VOCE AINDA ESTA AI?':fontcolor=0xe2b3c1:fontsize=42:x=(w-text_w)/2:y=750,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:text='VALE // TRANSMISSAO 01':fontcolor=0xf08a3c:fontsize=28:x=(w-text_w)/2:y=840,noise=alls=18:allf=t+u,format=yuv420p,fade=t=in:st=0:d=0.4,fade=t=out:st=7.4:d=0.6" \
-            -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 128k out/short.mp4
+            -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 128k out/short-$i.mp4; done
       - name: Instalar dependência do YouTube
         run: npm install googleapis@146 --no-save
-      - name: Publicar como privado
+      - name: Agendar 15 Shorts
         env:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-          PRIVACY_STATUS: private
-          VIDEO_TITLE: "Sinal perdido | Senhor Vale"
-          VIDEO_DESCRIPTION: "Uma transmissão que não deveria existir.\n\n#Shorts #SenhorVale #ARG"
-        run: node automation/upload-youtube.mjs
+        run: |
+          dates=("2026-09-05" "2026-09-06" "2026-09-07" "2026-09-08" "2026-09-09" "2026-09-10" "2026-09-11" "2026-09-12" "2026-09-13" "2026-09-14" "2026-09-15" "2026-09-16" "2026-09-17" "2026-09-18" "2026-09-19")
+          for i in $(seq 1 15); do
+            export VIDEO_PATH="out/short-$i.mp4"
+            export VIDEO_TITLE="Transmissão $i | Senhor Vale"
+            export VIDEO_DESCRIPTION="Um fragmento simples do universo Senhor Vale.\n\n#Shorts #SenhorVale #ARG"
+            export PUBLISH_AT="${dates[$((i-1))]}T06:00:00Z"
+            node automation/upload-youtube.mjs
+          done
