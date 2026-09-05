@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 
 const key = process.env.TUMBLR_CONSUMER_KEY;
 const secret = process.env.TUMBLR_CONSUMER_SECRET;
@@ -17,6 +18,6 @@ const res = await fetch('https://www.tumblr.com/oauth/request_token', {method:'P
 if (!res.ok) throw new Error(`Falha ao solicitar autorização do Tumblr: ${res.status}`);
 const data = Object.fromEntries(new URLSearchParams(await res.text()));
 if (!data.oauth_token || !data.oauth_token_secret) throw new Error('Resposta inválida do Tumblr.');
+fs.writeFileSync('tumblr-oauth-state.json', JSON.stringify({oauth_token:data.oauth_token, oauth_token_secret:data.oauth_token_secret, created_at:Date.now()}));
 console.log(`Abra este link para autorizar o blog: https://www.tumblr.com/oauth/authorize?oauth_token=${data.oauth_token}`);
 console.log('Depois da aprovação, o Tumblr redirecionará para o GitHub com oauth_token e oauth_verifier.');
-console.log('Guarde o oauth_token_secret apenas para a etapa seguinte; ele não foi exibido.');
