@@ -1,0 +1,32 @@
+name: Short diário — Senhor Vale
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 18 * * *"
+permissions:
+  contents: read
+jobs:
+  render-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instalar FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Preparar renderização
+        run: |
+          mkdir -p out
+          ffmpeg -y -loop 1 -i automation/tv.svg -f lavfi -i "anoises=colour=pink:amplitude=0.025" -t 8             -vf "scale=1080:1920,format=yuv420p,noise=alls=18:allf=t+u,fade=t=in:st=0:d=.4,fade=t=out:st=7.4:d=.6"             -shortest -c:v libx264 -preset veryfast -c:a aac -b:a 128k out/short.mp4
+      - name: Instalar dependência do YouTube
+        run: npm install googleapis@146 --no-save
+      - name: Publicar como privado
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          PRIVACY_STATUS: private
+          VIDEO_TITLE: "Sinal perdido | Senhor Vale"
+          VIDEO_DESCRIPTION: "Uma transmissão que não deveria existir.\n\n#Shorts #SenhorVale #ARG"
+        run: node automation/upload-youtube.mjs
