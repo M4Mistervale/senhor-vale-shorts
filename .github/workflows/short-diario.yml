@@ -16,9 +16,16 @@ jobs:
       - name: Preparar renderização e fila
         run: |
           mkdir -p out
-          for i in $(seq 1 15); do ffmpeg -y -f lavfi -i "color=c=0x070a12:s=1080x1920:r=30" -f lavfi -i "sine=frequency=$((210+i*7)):sample_rate=44100" -t 8 \
-            -vf "drawbox=x=70:y=330:w=940:h=1060:color=0x171b28:t=fill,drawbox=x=125:y=410:w=830:h=760:color=0x05070c:t=fill,drawbox=x=125:y=410:w=830:h=760:color=0x3b6b78:t=12,drawbox=x=150:y=570:w=780:h=4:color=0xde5276@0.35:t=fill,drawbox=x=150:y=740:w=780:h=4:color=0xde5276@0.35:t=fill,drawbox=x=150:y=910:w=780:h=4:color=0xde5276@0.35:t=fill,drawbox=x=150:y=1080:w=780:h=4:color=0xde5276@0.35:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:text='VOCE AINDA ESTA AI?':fontcolor=0xe2b3c1:fontsize=42:x=(w-text_w)/2:y=750,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:text='VALE // TRANSMISSAO 01':fontcolor=0xf08a3c:fontsize=28:x=(w-text_w)/2:y=840,noise=alls=18:allf=t+u,format=yuv420p,fade=t=in:st=0:d=0.4,fade=t=out:st=7.4:d=0.6" \
-            -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 128k out/short-$i.mp4; done
+          palettes=("0x070a12 0x171b28 0x3b6b78 0xde5276" "0x12090d 0x2b121c 0x8b344f 0xf08a3c" "0x080d0b 0x14231d 0x527d63 0xe2b3c1" "0x0d0a16 0x21162e 0x76558f 0xf08a3c" "0x111111 0x262626 0x8d6262 0xe2b3c1")
+          messages=("A CASA PARECIA NORMAL" "NAO OLHE PARA A TELA" "O RELOGIO PAROU" "ALGUMA COISA RESPONDEU" "VOCE AINDA ESTA AI?")
+          for i in $(seq 1 15); do
+            p=${palettes[$(((i-1)%5))]}; read bg frame screen accent <<< "$p"
+            msg=${messages[$(((i-1)%5))]}
+            y=$((360 + ((i-1)%5)*55)); freq=$((210+i*11))
+            ffmpeg -y -f lavfi -i "color=c=$bg:s=1080x1920:r=30" -f lavfi -i "sine=frequency=$freq:sample_rate=44100" -t 8 \
+              -vf "drawbox=x=70:y=$y:w=940:h=1060:color=$frame:t=fill,drawbox=x=125:y=$((y+80)):w=830:h=760:color=$screen:t=fill,drawbox=x=125:y=$((y+80)):w=830:h=760:color=$accent:t=12,drawbox=x=150:y=$((y+240)):w=780:h=4:color=$accent@0.35:t=fill,drawbox=x=150:y=$((y+410)):w=780:h=4:color=$accent@0.35:t=fill,drawbox=x=150:y=$((y+580)):w=780:h=4:color=$accent@0.35:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:text='$msg':fontcolor=$accent:fontsize=42:x=(w-text_w)/2:y=$((y+420)),drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf:text='VALE // TRANSMISSAO $i':fontcolor=$accent:fontsize=28:x=(w-text_w)/2:y=$((y+510)),noise=alls=$((12+i%8)):allf=t+u,format=yuv420p,fade=t=in:st=0:d=0.4,fade=t=out:st=7.4:d=0.6,scale=1080:1920,setsar=1" \
+              -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 128k out/short-$i.mp4
+          done
       - name: Instalar dependência do YouTube
         run: npm install googleapis@146 --no-save
       - name: Agendar 15 Shorts
